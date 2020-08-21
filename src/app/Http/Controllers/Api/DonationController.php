@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Entities\Accounts\Models\AccountCustomer;
 use App\Entities\Donations\Models\Donation;
 use App\Entities\Donations\Models\DonationPerk;
 use App\Entities\Groups\Models\Group;
@@ -10,8 +11,8 @@ use App\Entities\Payments\Models\AccountPayment;
 use App\Entities\Payments\Models\AccountPaymentSession;
 use App\Http\ApiController;
 use App\Library\Stripe\StripeHandler;
+use App\Library\Stripe\StripePaymentWebhook;
 use App\Library\Stripe\StripeWebhook;
-use App\Library\Stripe\StripeWebhookEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -31,12 +32,27 @@ final class DonationController extends ApiController
 
     public function create(Request $request)
     {
+        $isRecurring = $request->get('is_recurring', false);
         $accountId = $request->get('account_id');
         $amountInDollars = $request->get('amount', 3.00);
         $amountInCents = $amountInDollars * 100;
 
+        $customer = null;
+        if ($accountId !== null) {
+            $customer = AccountCustomer::where('account_id', $accountId)->first();
+
+            if ($customer !== null) {
+                $customer = $customer->customer_id;
+            }
+        }
+
         $pcbSessionUuid = Str::uuid();
-        $stripeSessionId = $this->stripeHandler->createCheckoutSession($pcbSessionUuid, $amountInCents);
+
+        if ($isRecurring) {
+            $stripeSessionId = $this->stripeHandler->createRecurringCheckoutSession($pcbSessionUuid, $amountInCents, $customer);
+        } else {
+            $stripeSessionId = $this->stripeHandler->createOneTimeCheckoutSession($pcbSessionUuid, $amountInCents, $customer);
+        }
 
         $session = AccountPaymentSession::create([
             'session_id' => $pcbSessionUuid->toString(),
@@ -107,7 +123,7 @@ final class DonationController extends ApiController
      *    }
      * }
      */
-    public function store(StripeWebhook $webhook)
+    public function store(StripePaymentWebhook $webhook)
     {
         // Sanity check
         if ($webhook->getAmountInCents() <= 0) {
@@ -149,6 +165,11 @@ final class DonationController extends ApiController
                     'is_active' => true,
                     'is_lifetime_perks' => $isLifetime,
                     'expires_at' => $donationExpiry,
+                ]);
+
+                AccountCustomer::create([
+                    'account_id' => $accountId,
+                    'customer_id' => $webhook->getCustomerId(),
                 ]);
             }
 

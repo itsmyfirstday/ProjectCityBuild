@@ -80,6 +80,11 @@ final class Account extends Authenticatable
         return $this->hasMany(AccountEmailChange::class, 'account_id');
     }
 
+    public function customer()
+    {
+        return $this->hasOne(AccountCustomer::class, 'account_id', 'account_id');
+    }
+
     public function gameBans()
     {
         // TODO: there's probably a way to optimise this just using the DB

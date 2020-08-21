@@ -3,6 +3,7 @@
 namespace App\Library\Stripe;
 
 use Stripe\Checkout\Session;
+use Stripe\Event;
 use Stripe\Stripe;
 use Stripe\Charge;
 use Stripe\Customer;
@@ -39,11 +40,13 @@ class StripeHandler
      * @param string $uniqueSessionId   A unique UUID that will be sent to Stripe to be stored alongside the
      *                                  session. When Stripe notifies us via WebHook that the payment is processed,
      *                                  they will pass us back the UUID so we can fulfill the purchase.
+     * @param int $amountInCents
+     * @param string $customerId        Associated Stripe customer id
      * @return string Stripe session ID
      */
-    public function createCheckoutSession(string $uniqueSessionId, int $amountInCents): string
+    public function createOneTimeCheckoutSession(string $uniqueSessionId, int $amountInCents, ?string $customerId = null): string
     {
-        $session = Session::create([
+        $sessionData = [
             'payment_method_types' => ['card'],
             'client_reference_id' => $uniqueSessionId,
             'line_items' => [
@@ -58,7 +61,37 @@ class StripeHandler
             ],
             'success_url' => route('front.donate.success'),
             'cancel_url' => route('front.donate'),
-        ]);
+        ];
+
+        if ($customerId !== null) {
+            $sessionData['customer'] = $customerId;
+        }
+
+        $session = Session::create($sessionData);
+
+        return $session->id;
+    }
+
+    public function createRecurringCheckoutSession(string $uniqueSessionId, int $amountInCents, ?string $customerId = null): string
+    {
+        $sessionData = [
+            'payment_method_types' => ['card'],
+            'client_reference_id' => $uniqueSessionId,
+            'subscription_data' => [
+                'items' => [[
+                    'plan' => config('services.stripe.plans.recurring'),
+                    'quantity' => round($amountInCents / 100),
+                ]],
+            ],
+            'success_url' => route('front.donate.success', ['session_id' => '{CHECKOUT_SESSION_ID}']),
+            'cancel_url' => route('front.donate'),
+        ];
+
+        if ($customerId !== null) {
+            $sessionData['customer'] = $customerId;
+        }
+
+        $session = Session::create($sessionData);
 
         return $session->id;
     }
@@ -69,59 +102,11 @@ class StripeHandler
      * @param string $payload
      * @param string $signature
      * @param string $secret
-     * @return StripeWebhook
      * @throws \Stripe\Error\SignatureVerification
-     *
-     * Example Webhook Payload:
-     * {
-     *    "created": 1326853478,
-     *    "livemode": false,
-     *    "id": "evt_00000000000000",
-     *    "type": "checkout.session.completed",
-     *    "object": "event",
-     *    "request": null,
-     *    "pending_webhooks": 1,
-     *    "api_version": "2018-07-27",
-     *    "data": {
-     *       "object": {
-     *           "id": "cs_00000000000000",
-     *           "object": "checkout.session",
-     *           "billing_address_collection": null,
-     *           "cancel_url": "https://example.com/cancel",
-     *           "client_reference_id": null,
-     *           "customer": null,
-     *           "customer_email": null,
-     *           "display_items": [
-     *               {
-     *                   "amount": 1500,
-     *                   "currency": "usd",
-     *                   "custom": {
-     *                       "description": "Comfortable cotton t-shirt",
-     *                       "images": null,
-     *                       "name": "T-shirt"
-     *                   },
-     *                   "quantity": 2,
-     *                   "type": "custom"
-     *               }
-     *           ],
-     *           "livemode": false,
-     *           "locale": null,
-     *           "mode": null,
-     *           "payment_intent": "pi_00000000000000",
-     *           "payment_method_types": [
-     *               "card"
-     *           ],
-     *           "setup_intent": null,
-     *           "submit_type": null,
-     *           "subscription": null,
-     *           "success_url": "https://example.com/success"
-     *       }
-     *    }
-     * }
+     * @return Event
      */
-    public function getWebhookEvent(string $payload, string $signature, string $secret): ?StripeWebhook
+    public function getWebhookEvent(string $payload, string $signature, string $secret): Event
     {
-        $event = Webhook::constructEvent($payload, $signature, $secret);
-        return StripeWebhook::fromJSON($event);
+        return Webhook::constructEvent($payload, $signature, $secret);
     }
 }

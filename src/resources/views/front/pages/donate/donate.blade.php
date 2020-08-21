@@ -10,23 +10,49 @@
         const stripe = Stripe('{{ config('services.stripe.key') }}');
         const sessionStartEndpoint = '{{ route('donations.create') }}';
 
-        async function startCheckoutFlow() {
+        async function startOneTimeCheckout() {
             try {
                 const amountInDollars = document.getElementById('donation-amount').value;
-                @auth
+                        @auth
                 const endpoint = `${sessionStartEndpoint}?amount=${amountInDollars}&account_id={{ Auth::user()->getKey() }}`
-                @else
+                        @else
                 const endpoint = `${sessionStartEndpoint}?amount=${amountInDollars}`
-                @endauth
+                        @endauth
 
                 const response = await fetch(endpoint, {
-                    method: 'GET',
-                    mode: 'same-origin',
-                    cache: 'no-cache',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
+                        method: 'GET',
+                        mode: 'same-origin',
+                        cache: 'no-cache',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                const json = await response.json();
+
+                await redirectToCheckout(json.data.session_id)
+
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function startRecurringCheckout() {
+            try {
+                const amountInDollars = document.getElementById('donation-amount').value;
+                        @auth
+                const endpoint = `${sessionStartEndpoint}?is_recurring=true&amount=${amountInDollars}&account_id={{ Auth::user()->getKey() }}`
+                        @else
+                const endpoint = `${sessionStartEndpoint}?is_recurring=true&amount=${amountInDollars}`
+                        @endauth
+
+                const response = await fetch(endpoint, {
+                        method: 'GET',
+                        mode: 'same-origin',
+                        cache: 'no-cache',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
                 const json = await response.json();
 
                 await redirectToCheckout(json.data.session_id)
@@ -51,7 +77,8 @@
         }
 
         window.onload = function() {
-            document.getElementById('stripe-donate-button').onclick = startCheckoutFlow;
+            document.getElementById('stripe-donate-button').onclick = startOneTimeCheckout;
+            document.getElementById('stripe-donate-recurring-button').onclick = startRecurringCheckout;
         }
     </script>
 @endpush
@@ -141,8 +168,13 @@
 
             <div>
                 <input type="text" class="input-text" id="donation-amount" value="3.00" placeholder="3.00" />
+
                 <button class="button button--large button--fill button--primary" type="button" id="stripe-donate-button">
-                    <i class="fas fa-credit-card"></i> Donate via Card
+                    <i class="fas fa-credit-card"></i> Donate
+                </button>
+
+                <button class="button button--large button--fill button--primary" type="button" id="stripe-donate-recurring-button">
+                    <i class="fas fa-credit-card"></i> Donate Recurring
                 </button>
             </div>
 
