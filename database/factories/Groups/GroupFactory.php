@@ -16,3 +16,7 @@ $factory->define(Group::class, function (Faker\Generator $faker) {
         'discourse_name' => $faker->name(),
     ];
 });
+
+$factory->state(Group::class, 'as-default', [
+    'is_default' => true,
+]);
