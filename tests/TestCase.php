@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Entities\Environment;
 use App\Http\Middleware\MfaGate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -14,6 +15,12 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Use SQLite for tests only in local development
+//        if (Environment::isDev()) {
+//            putenv('APP_ENV=testing');
+//            putenv('DB_CONNECTION=sqlite');
+//        }
     }
 
     protected function disableReauthMiddleware(): TestCase

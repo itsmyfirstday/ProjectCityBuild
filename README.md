@@ -15,64 +15,64 @@ The official repository for [Project City Build](https://projectcitybuild.com)'s
 
 ### Stack
 * Frameworks: Laravel 8, ReactJS 16
-* Environment: Dockerised with Laravel Sail
+* Environment: Docker Compose
 * CI/CD: Github Actions, Codecov
 
 All branches, commits and pull-requests are continuously tested
 
 ### Requirements
-* Docker
-
-We use Laravel Sail to create a dockerised development environment. You can also run it as a traditional application, you'll need:
-
-* PHP 7.4
-* MySQL/MariaDB
-* Composer
-* NPM
+* Docker and Docker Compose
 
 ### Can I contribute?
 Absolutely. Feel free to fork and send pull requests any time. We'd be thrilled to have some help.
 
 # Contributing
 
-You should read the [Laravel Sail](https://laravel.com/docs/8.x/sail) documentation first. If you're using Windows you have to run it through WSL2.
+We use Docker Compose to orchestrate a development environment.
+If you're using Windows we highly recommend that you run it through [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install-win10).
 
 ## First time setup
 
 1. Run `cp .env.example .env`, then edit the file as appropriate (see below)
 2. Run `make bootstrap`
 
-You'll then be able to access the website on `http://localhost`
+You'll then be able to access the website at `http://localhost`
 
 ## Development
 Once *First time setup* is complete, you only need to run one command to boot up the environment:
 
-`sail up -d` to start Sail
+`docker-compose up -d`
 
-For front-end development, you'll want to run:
+If necessary, you can enter the container at any time with `make shell` or run artisan commands with `make artisan`
 
-`sail npm watch` to start NPM build. This also starts BrowserSync on `http://localhost:3000`
+### Front-end
 
-You can enter the container at any time with `sail shell`
+For front-end development, run `make watch`. 
 
-### Linter
+This will start BrowserSync on `http://localhost:3000` which automatically builds CSS, JS and static assets
+when any file change occurs.
 
-We automatically run [PHP Insights](https://phpinsights.com/) on CI for linting.
+### HTTPS
+You'll need to install [mkcert](https://github.com/FiloSottile/mkcert) so that HTTPS works locally (https://localhost). 
+We don't install this automatically because installation steps differ based on your OS and distribution.
 
-You can run the linter locally with `sail php artisan insights`
+Then run `mkcert -install`
 
-If you want automatic fixing, you can run it with the `--fix` option
+> If you're using WSL (Windows) with Firefox, you'll need to install mkcert on Windows too, then perform [these extra steps](https://ddev.readthedocs.io/en/stable/#windows-and-firefox-mkcert-install-additional-instructions)
+> followed by [these steps](https://github.com/microsoft/WSL/issues/3161#issuecomment-451863149).
+
+`make bootstrap` will automatically generate the certificate for you. 
+Should you need to regenerate the certificate, you can run `make cert`
 
 ### Database
-* If the database schema has changed, remember to run `sail artisan migrate` from inside the workspace container to ensure you always have the latest schema.
+If the database schema has changed, remember to run `make artisan migrate` to ensure you always have the latest schema.
 
 ### S3 Bucket
 Backups go to an S3 bucket specified in the `backup` disk. To run this functionality in development, you need to configure a valid bucket. To avoid having to use a real one:
 
-1. Install Minio with [Takeout](https://github.com/tighten/takeout), accepting the defaults
-2. Go to `http://localhost:9000`, using the credentials minioadmin/minioadmin
-3. Make a bucket called `pcb-backup`
-4. Put this in your `.env`:
+1. Go to `http://localhost:9000`, using the credentials minioadmin/minioadmin
+2. Make a bucket called `pcb-backup`
+3. Put this in your `.env`:
 
 ```dotenv
 AWS_ACCESS_KEY_ID=minioadmin
@@ -83,13 +83,12 @@ AWS_ENDPOINT="http://minio:9000"
 AWS_URL="http://minio:9000"
 ```
 
-The Sail container's networking has already been configured to connect to Takeout's networking, so the Minio container is accessible at the hostname `minio`.
-
 ### Stripe Webhooks
-Use [stripe-cli](https://stripe.com/docs/stripe-cli) to receive payment webhooks locally.
+You can trigger webhook events via the Stripe CLI container. 
+The container (while running) is constantly listening for events. 
 
-After installing, run `stripe listen --forward-to localhost/api/webhooks/stripe` to forward webhook events to the correct endpoint. Copy the code you're given into the `STRIPE_WEBHOOK_SECRET` env value.
+* Run `make stripe payment` to send a payment webhook event
 
 ## Testing
-* Run `sail test` to run all unit/integration tests
-* Enter the container with `sail shell` and run `phpstan -c phpstan.neon` to run PHP analysis
+* Run `make test` to run all unit/integration tests
+* Run `docker-compose exec php-fpm phpstan -c phpstan.neon` to run PHP analysis

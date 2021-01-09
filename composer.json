@@ -31,7 +31,6 @@
         "barryvdh/laravel-debugbar": "^3.2",
         "beyondcode/laravel-dump-server": "^1.0",
         "fzaninotto/faker": "^1.4",
-        "laravel/sail": "^0.0.10",
         "mockery/mockery": "^1.0",
         "nunomaduro/collision": "^5.0",
         "nunomaduro/larastan": "^0.6.11",

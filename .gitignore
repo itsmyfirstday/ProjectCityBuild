@@ -1,27 +1,29 @@
-# packages
+# Packages
 /node_modules
 /vendor
 
-# logs
+# Logs
 npm-debug.log
 yarn-error.log
+supervisord.log
+supervisord.pid
 
-# dev
+# Dev
 .phpunit.result.cache
 .php_cs.cache
 
-# environment settings
+# Environment settings
 .env
 
-# generated resources/builds
+# Generated resources/builds
 /public/assets/css
 /public/assets/js
 mix-manifest.json
 
-# token buckets
+# Token buckets
 *.ratelimit
 
-# storage
+# Storage
 /public/hot
 /public/storage
 /storage/*.key
@@ -30,9 +32,10 @@ mix-manifest.json
 .vscode
 /.idea
 
-# dev environments
+# Dev environments
 /.vagrant
 Homestead.json
 Homestead.yaml
+dhparam
 
 clover.xml

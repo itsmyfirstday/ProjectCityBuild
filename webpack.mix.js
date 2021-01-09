@@ -30,12 +30,14 @@ if(mix.config.production) {
 } else {
     mix.browserSync({
         open: false,
+        notify: false,
+        proxy: 'nginx',
         files: [
             'resources/**/*.php',
             'resources/**/*.css',
             'resources/**/*.js',
             'resources/**/*.ts',
             'public/**/*',
-        ]
+        ],
     });
 }

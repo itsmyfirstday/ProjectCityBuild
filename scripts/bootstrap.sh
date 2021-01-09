@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "=> Checking for docker installation..."
+echo "=> Checking for docker..."
 
 docker help > /dev/null || \
     (echo "Error: Docker not found. Please manually install it first" && \
@@ -8,61 +8,71 @@ docker help > /dev/null || \
 
 # ------------------------------------------------------------------------------------------------
 
-echo "=> Checking for running containers..."
+echo "=> Checking for docker-compose..."
 
-SERVICE_NAME="laravel.test"
-CONTAINER_NAME=$(docker-compose ps -q "$SERVICE_NAME")
+docker-compose help > /dev/null || \
+    (echo "Error: Docker-compose not found. Please manually install it first" && \
+     exit 1)
 
-if [ "$(docker container inspect -f '{{.State.Status}}' "$CONTAINER_NAME")" == "running" ]; then
-    echo "Running containers found. Stoppping and removing..."
-    docker-compose down
-fi
+# ------------------------------------------------------------------------------------------------
+
+#echo "=> Checking for running containers..."
+#
+#SERVICE_NAME="laravel.test"
+#CONTAINER_NAME=$(docker-compose ps -q "$SERVICE_NAME")
+#
+#if [ "$(docker container inspect -f '{{.State.Status}}' "$CONTAINER_NAME")" == "running" ]; then
+#    echo "Running containers found. Stoppping and removing..."
+#    docker-compose down
+#fi
+
+# ------------------------------------------------------------------------------------------------
+
+echo "=> Generating SSL certificate for local dev..."
+
+./scripts/generate-cert.sh || exit 1
+
+# ------------------------------------------------------------------------------------------------
+
+echo "=> Orchestrating dev environment..."
+
+docker-compose up -d
 
 # ------------------------------------------------------------------------------------------------
 
 echo "=> Downloading composer dependencies..."
 
-docker run --rm \
-    -v $(pwd):/opt \
-    -w /opt \
-    laravelsail/php74-composer:latest \
-    composer install
+docker-compose exec php-fpm composer install
 
 # ------------------------------------------------------------------------------------------------
 
-echo "=> Adding sail alias..."
+echo "=> Generating app key..."
 
-if alias sail 2>/dev/null; then
-    alias sail='bash vendor/bin/sail'
-    echo "Alias added"
-else
-    echo "Alias already exists. Skipping..."
-fi
-
-# ------------------------------------------------------------------------------------------------
-
-echo "=> Booting up container..."
-
-./vendor/bin/sail up -d
+docker-compose exec php-fpm php artisan key:generate
 
 # ------------------------------------------------------------------------------------------------
 
 echo "=> Preparing database..."
 
-./vendor/bin/sail artisan migrate --seed
+docker-compose exec php-fpm php artisan migrate --seed
 
 # ------------------------------------------------------------------------------------------------
 
 echo "=> Downloading NPM dependencies..."
 
-./vendor/bin/sail npm install
+docker-compose exec php-fpm npm install
 
 # ------------------------------------------------------------------------------------------------
 
 echo "=> Building front-end assets..."
 
-./vendor/bin/sail npm run dev
+docker-compose exec php-fpm npm run dev
 
 # ------------------------------------------------------------------------------------------------
 
+echo "=================================="
+echo " "
 echo "Done! Ready for development"
+echo "Visit http://localhost"
+echo " "
+echo "=================================="
