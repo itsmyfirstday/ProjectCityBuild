@@ -93,6 +93,6 @@ final class MinecraftPlayer extends Model implements BannableModelInterface, Rec
 
     public function getHumanRecordName(): string
     {
-        return "MC Player " . $this->uuid;
+        return 'MC Player '.$this->uuid;
     }
 }

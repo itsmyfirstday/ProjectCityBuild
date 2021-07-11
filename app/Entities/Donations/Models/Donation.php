@@ -76,6 +76,6 @@ final class Donation extends Model implements Recordable
 
     public function getHumanRecordName(): string
     {
-        return "Donation #" . $this->getKey();
+        return 'Donation #'.$this->getKey();
     }
 }

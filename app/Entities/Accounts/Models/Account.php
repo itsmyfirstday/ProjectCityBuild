@@ -205,6 +205,6 @@ final class Account extends Authenticatable implements Recordable
 
     public function getHumanRecordName(): string
     {
-        return "Account " . $this->username ?? $this->email;
+        return 'Account '.$this->username ?? $this->email;
     }
 }
